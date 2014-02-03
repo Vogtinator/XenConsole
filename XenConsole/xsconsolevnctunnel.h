@@ -27,11 +27,13 @@ public slots:
     
 private:
     QTcpSocket *vnc_server;
+    QTcpSocket vnc_nossl_server;
+    QSslSocket vnc_ssl_server;
     QTcpSocket *current_client;
     QTcpServer server;
     QString host, query;
     int port;
-    bool got_rfb_header;
+    bool ssl, got_rfb_header;
 };
 
 #endif // XSCONSOLEVNCTUNNEL_H
