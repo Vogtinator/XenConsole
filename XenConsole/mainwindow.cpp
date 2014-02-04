@@ -1,3 +1,5 @@
+#include <utility>
+
 #include <QLayout>
 #include <QListWidget>
 #include <QMessageBox>
@@ -202,17 +204,15 @@ void MainWindow::connectServer()
 
     if(host.username.isEmpty())
     {
-        //TODO: Own dialog
-        host.username = QInputDialog::getText(this, trUtf8("Authentication"), trUtf8("Please enter your username"), QLineEdit::Normal, "root");
-        if(host.username.isEmpty())
+        AuthenticateServerDialog dialog(host.name, this);
+
+        dialog.show();
+        dialog.exec();
+
+        if(!dialog.accepted())
             return;
 
-        host.username = QInputDialog::getText(this, trUtf8("Authentication"), trUtf8("Please enter your password"), QLineEdit::Password);
-        if(host.password.isEmpty())
-        {
-            host.username = "";
-            return;
-        }
+        std::tie(host.username, host.password) = dialog.getAuth();
     }
 
     XSLoadHostThread *thread = new XSLoadHostThread(&host);

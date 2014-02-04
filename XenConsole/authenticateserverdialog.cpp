@@ -2,11 +2,15 @@
 #include "ui_authenticateserverdialog.h"
 #include "mainwindow.h"
 
-AuthenticateServerDialog::AuthenticateServerDialog(QWidget *parent) :
+AuthenticateServerDialog::AuthenticateServerDialog(QString name, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::AuthenticateServerDialog)
 {
     ui->setupUi(this);
+
+    setWindowTitle(tr("Authentication for %1").arg(name));
+
+    ui->passwordEdit->setFocus();
 }
 
 AuthenticateServerDialog::~AuthenticateServerDialog()
@@ -14,13 +18,20 @@ AuthenticateServerDialog::~AuthenticateServerDialog()
     delete ui;
 }
 
-void AuthenticateServerDialog::setName(QString name)
+std::pair<QString, QString> AuthenticateServerDialog::getAuth()
 {
-    setWindowTitle(tr("Authentication for %1").arg(name));
+    return std::make_pair(ui->usernameEdit->text(), ui->passwordEdit->text());
+}
+
+bool AuthenticateServerDialog::accepted()
+{
+    return is_accepted;
 }
 
 void AuthenticateServerDialog::accept()
 {
     this->close();
+
+    is_accepted = true;
     emit connectionReady(ui->usernameEdit->text(), ui->passwordEdit->text());
 }
