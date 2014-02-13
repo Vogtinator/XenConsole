@@ -53,11 +53,18 @@ void XSLoadHostThread::run()
         if(vm->is_a_snapshot || vm->is_a_template)
             continue;
 
-        QListWidgetItem *item = new QListWidgetItem(QString::fromUtf8(vm->name_label), data->vm_list_widget);
-        item->setData(Qt::UserRole, QVariant::fromValue(reinterpret_cast<void*>(vm_data)));
+        doInGUIThread([this,vm_data] { QListWidgetItem *item = new QListWidgetItem(QString::fromUtf8(vm_data->data->name_label), data->vm_list_widget);
+                         item->setData(Qt::UserRole, QVariant::fromValue(reinterpret_cast<void*>(vm_data))); });
     }
 
-    data->vm_list_widget->setDisabled(false);
+    doInGUIThread([this] { data->vm_list_widget->setDisabled(false); });
 
     emit progressChanged(100, trUtf8("Connected to %1").arg(data->name));
+}
+
+void XSLoadHostThread::doInGUIThread(std::function<void ()> f)
+{
+    iWantToDoSomething({f});
+
+    this->exec();
 }

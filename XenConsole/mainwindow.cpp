@@ -16,6 +16,9 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
+/* See below */
+Q_DECLARE_METATYPE(QVector<int>)
+
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
@@ -30,6 +33,11 @@ MainWindow::MainWindow(QWidget *parent) :
 
     ui->statusBar->addPermanentWidget(&status_label, 3);
     ui->statusBar->addPermanentWidget(&progress_bar, 2);
+
+    qRegisterMetaType<function_wrapper>();
+
+    /* Qt5 complains about it not being registered. */
+    qRegisterMetaType<QVector<int> >();
 
     connect(ui->saveButton, SIGNAL(clicked()), this, SLOT(addServer()));
     connect(ui->protocol, SIGNAL(currentIndexChanged(QString)), this, SLOT(protocolChanged(QString)));
@@ -217,8 +225,10 @@ void MainWindow::connectServer()
 
     XSLoadHostThread *thread = new XSLoadHostThread(&host);
 
-    connect(thread, SIGNAL(progressChanged(int,QString)), this, SLOT(showProgress(int,QString)));
-    connect(thread, SIGNAL(terminated()), thread, SLOT(deleteLater()));
+    connect(thread, SIGNAL(progressChanged(int,QString)), this, SLOT(showProgress(int,QString)), Qt::QueuedConnection);
+    connect(thread, SIGNAL(error(QString,xen_session*)), this, SLOT(xenError(QString,xen_session*)), Qt::QueuedConnection);
+    connect(thread, SIGNAL(finished()), thread, SLOT(deleteLater()));
+    connect(thread, SIGNAL(iWantToDoSomething(function_wrapper)), this, SLOT(doInThisThread(function_wrapper)), Qt::QueuedConnection);
 
     thread->start();
 }
@@ -251,6 +261,7 @@ void MainWindow::vmDoubleClicked(QModelIndex index)
     }
 
     vm->window = ui->mdiArea->addSubWindow(new VMWindow(vm, nullptr));
+    vm->window->resize(350, 350);
     vm->window->show();
 }
 
@@ -275,7 +286,7 @@ void MainWindow::disconnectHost(xshost_data &host)
         vm->data = nullptr;
     }
 
-    delete host.vms;
+    delete[] host.vms;
     host.vms = nullptr;
 
     xen_host_record_free(host.data);
@@ -290,4 +301,12 @@ void MainWindow::disconnectHost(xshost_data &host)
 
     xen_vm_xen_vm_record_map_free(host.vm_map);
     host.vm_map = nullptr;
+}
+
+void MainWindow::doInThisThread(function_wrapper f)
+{
+    f.f();
+
+    QThread *thread = qobject_cast<QThread*>(QObject::sender());
+    thread->quit();
 }

@@ -11,13 +11,12 @@ class XSConsoleVNCTunnel : public QThread
     Q_OBJECT
 public:
     XSConsoleVNCTunnel(QString url, QString username, QString password);
+    virtual ~XSConsoleVNCTunnel();
 
     int startListening();
     void stopListening();
 
     bool isConnected();
-
-    ~XSConsoleVNCTunnel();
 
 public slots:
     void connection();

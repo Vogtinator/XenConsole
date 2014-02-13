@@ -1,6 +1,8 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+#include <functional>
+
 #include <QMainWindow>
 #include <QSettings>
 #include <QVector>
@@ -8,6 +10,7 @@
 #include <QProgressBar>
 
 #include "xenserverapi.h"
+#include "xsloadhostthread.h"
 
 namespace Ui {
 class MainWindow;
@@ -37,6 +40,7 @@ public slots:
     //For threads
     void xenError(QString msg, xen_session *session = nullptr);
     void showProgress(int percent, QString msg);
+    void doInThisThread(function_wrapper f);
 
 private:
     void disconnectHost(xshost_data &host);

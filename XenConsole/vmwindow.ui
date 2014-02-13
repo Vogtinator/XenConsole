@@ -18,7 +18,7 @@
     <item>
      <widget class="QTabWidget" name="tabWidget">
       <property name="currentIndex">
-       <number>1</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="overviewTab">
        <attribute name="title">
@@ -33,12 +33,6 @@
          </widget>
         </item>
        </layout>
-      </widget>
-      <widget class="QWidget" name="vncTab">
-       <attribute name="title">
-        <string>Console</string>
-       </attribute>
-       <layout class="QHBoxLayout" name="horizontalLayout_2"/>
       </widget>
      </widget>
     </item>

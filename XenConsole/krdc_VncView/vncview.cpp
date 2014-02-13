@@ -66,10 +66,9 @@ VncView::VncView(QWidget *parent, const KUrl &url, KConfigGroup configGroup)
     m_host = url.host();
     m_port = url.port();
 
-    // BlockingQueuedConnection can cause deadlocks when exiting, handled in startQuitting()
-    connect(&vncThread, SIGNAL(imageUpdated(int,int,int,int)), this, SLOT(updateImage(int,int,int,int)), Qt::BlockingQueuedConnection);
-    connect(&vncThread, SIGNAL(gotCut(QString)), this, SLOT(setCut(QString)), Qt::BlockingQueuedConnection);
-    connect(&vncThread, SIGNAL(passwordRequest(bool)), this, SLOT(requestPassword(bool)), Qt::BlockingQueuedConnection);
+    connect(&vncThread, SIGNAL(imageUpdated(int,int,int,int)), this, SLOT(updateImage(int,int,int,int)), Qt::QueuedConnection);
+    connect(&vncThread, SIGNAL(gotCut(QString)), this, SLOT(setCut(QString)), Qt::QueuedConnection);
+    connect(&vncThread, SIGNAL(passwordRequest(bool)), this, SLOT(requestPassword(bool)), Qt::QueuedConnection);
     connect(&vncThread, SIGNAL(outputErrorMessage(QString)), this, SLOT(outputErrorMessage(QString)));
 
     m_clipboard = QApplication::clipboard();
@@ -103,7 +102,7 @@ bool VncView::eventFilter(QObject *obj, QEvent *event)
     return RemoteView::eventFilter(obj, event);
 }
 
-QSize VncView::framebufferSize()
+/*QSize VncView::framebufferSize()
 {
     return m_frame.size();
 }
@@ -116,7 +115,7 @@ QSize VncView::sizeHint() const
 QSize VncView::minimumSizeHint() const
 {
     return size();
-}
+}*/
 
 void VncView::scaleResize(int w, int h)
 {
@@ -136,7 +135,7 @@ void VncView::scaleResize(int w, int h)
 
         const qreal newW = m_frame.width() * m_horizontalFactor;
         const qreal newH = m_frame.height() * m_verticalFactor;
-        setMaximumSize(newW, newH); //This is a hack to force Qt to center the view in the scroll area
+        //setMaximumSize(newW, newH); //This is a hack toforce Qt to center the view in the scroll area
         resize(newW, newH);
     } 
 }
@@ -185,17 +184,10 @@ bool VncView::isQuitting()
     return m_quitFlag;
 }
 
-bool VncView::start()
+bool VncView::start(RemoteView::Quality quality)
 {
     vncThread.setHost(m_host);
     vncThread.setPort(m_port);
-    RemoteView::Quality quality;
-#ifdef QTONLY
-    quality = (RemoteView::Quality)((QCoreApplication::arguments().count() > 2) ?
-        QCoreApplication::arguments().at(2).toInt() : 2);
-#else
-    quality = m_hostPreferences->quality();
-#endif
 
     vncThread.setQuality(quality);
 
@@ -305,7 +297,7 @@ void VncView::outputErrorMessage(const QString &message)
 
     startQuitting();
 
-    KMessageBox::error(this, message, i18n("VNC failure"));
+    //KMessageBox::error(this, message, i18n("VNC failure"));
 
     emit errorMessage(i18n("VNC failure"), message);
 }
@@ -319,8 +311,6 @@ HostPreferences* VncView::hostPreferences()
 
 void VncView::updateImage(int x, int y, int w, int h)
 {
-//     kDebug(5011) << "got update" << width() << height();
-
     m_x = x;
     m_y = y;
     m_w = w;
@@ -357,9 +347,9 @@ void VncView::updateImage(int x, int y, int w, int h)
             emit framebufferSizeChanged(m_hostPreferences->width(), m_hostPreferences->height());
             scaleResize(m_hostPreferences->width(), m_hostPreferences->height());
             kDebug() << "m_frame.size():" << m_frame.size() << "size()" << size();
-#else
-//TODO: qtonly alternative
 #endif
+
+            scaleResize(m_frame.size().width(), m_frame.size().height());
         }
 
         m_initDone = true;
@@ -380,8 +370,8 @@ void VncView::updateImage(int x, int y, int w, int h)
         } else {
             kDebug(5011) << "Resizing: " << m_frame.width() << m_frame.height();
             resize(m_frame.width(), m_frame.height());
-            setMaximumSize(m_frame.width(), m_frame.height()); //This is a hack to force Qt to center the view in the scroll area
-            setMinimumSize(m_frame.width(), m_frame.height());
+            /*setMaximumSize(m_frame.width(), m_frame.height()); //This is a hack to force Qt to center the view in the scroll area
+            setMinimumSize(m_frame.width(), m_frame.height());*/
             emit framebufferSizeChanged(m_frame.width(), m_frame.height());
         }
     }
@@ -423,8 +413,8 @@ void VncView::enableScaling(bool scale)
         m_verticalFactor = 1.0;
         m_horizontalFactor = 1.0;
 
-        setMaximumSize(m_frame.width(), m_frame.height()); //This is a hack to force Qt to center the view in the scroll area
-        setMinimumSize(m_frame.width(), m_frame.height());
+        /*setMaximumSize(m_frame.width(), m_frame.height()); //This is a hack to force Qt to center the view in the scroll area
+        setMinimumSize(m_frame.width(), m_frame.height());*/
         resize(m_frame.width(), m_frame.height());
     }
 }
@@ -440,7 +430,7 @@ void VncView::paintEvent(QPaintEvent *event)
 {
 //     kDebug(5011) << "paint event: x: " << m_x << ", y: " << m_y << ", w: " << m_w << ", h: " << m_h;
     if (m_frame.isNull() || m_frame.format() == QImage::Format_Invalid) {
-        kDebug(5011) << "no valid image to paint";
+        //kDebug(5011) << "no valid image to paint";
         RemoteView::paintEvent(event);
         return;
     }
@@ -482,6 +472,8 @@ void VncView::paintEvent(QPaintEvent *event)
 void VncView::resizeEvent(QResizeEvent *event)
 {
     RemoteView::resizeEvent(event);
+
+    scaleResize(event->size().width(), event->size().height());
     update();
 }
 
@@ -597,7 +589,7 @@ void VncView::unpressModifiers()
 
 void VncView::clipboardDataChanged()
 {
-    kDebug(5011);
+    //kDebug(5011);
 
     if (m_status != Connected)
         return;

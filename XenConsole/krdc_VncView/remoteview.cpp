@@ -250,7 +250,7 @@ void RemoteView::saveWalletPassword(const QString &password, bool fromUserNameOn
 QCursor RemoteView::localDotCursor() const
 {
 #ifdef QTONLY
-    return QCursor(); //TODO
+    return QCursor();
 #else
     QBitmap cursorBitmap(KGlobal::dirs()->findResource("appdata",
                                                        "pics/pointcursor.png"));

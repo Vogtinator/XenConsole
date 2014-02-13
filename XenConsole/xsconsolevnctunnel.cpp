@@ -4,15 +4,22 @@
 #include "xsconsolevnctunnel.h"
 
 XSConsoleVNCTunnel::XSConsoleVNCTunnel(QString url, QString username, QString password)
-    : QThread(nullptr), vnc_server(nullptr), current_client(nullptr)
+    : QThread(nullptr), vnc_server(nullptr), current_client(nullptr), got_rfb_header(false)
 {
     QUrl qurl = url;
     ssl = qurl.scheme() == "https";
     port = qurl.port(ssl ? 443 : 80);
 
     QString auth = QString::fromUtf8(QString("%1:%2").arg(username).arg(password).toUtf8().toBase64());
-    query = QString("CONNECT %1?%2 HTTP/1.1\r\nAuthorization: Basic %3\r\nHost: %4\r\n\r\n").arg(QString::fromUtf8(qurl.encodedPath())).arg(QString::fromUtf8(qurl.encodedQuery())).arg(auth).arg(qurl.host());
+
+    #if (QT_VERSION >= QT_VERSION_CHECK(5, 0, 0))
+        QString param = qurl.query(QUrl::FullyEncoded);
+    #else
+        QString param = QString::fromUtf8(qurl.encodedQuery());
+    #endif
     host = qurl.host();
+
+    query = QString("CONNECT %1?%2 HTTP/1.1\r\nAuthorization: Basic %3\r\nHost: %4\r\n\r\n").arg(qurl.path()).arg(param).arg(auth).arg(host);
 
     QSslConfiguration conf = vnc_ssl_server.sslConfiguration();
     conf.setPeerVerifyMode(QSslSocket::VerifyNone);
@@ -24,10 +31,14 @@ XSConsoleVNCTunnel::XSConsoleVNCTunnel(QString url, QString username, QString pa
         vnc_server = &vnc_nossl_server;
 
     connect(vnc_server, SIGNAL(readyRead()), this, SLOT(writeToClient()));
+    connect(vnc_server, SIGNAL(aboutToClose()), this, SLOT(quit()));
 }
 
 XSConsoleVNCTunnel::~XSConsoleVNCTunnel()
 {
+    //Stop event loop
+    this->quit();
+
     stopListening();
 }
 
@@ -73,6 +84,8 @@ void XSConsoleVNCTunnel::connection()
         }
     }
 
+    qDebug() << "Tunnel connected.";
+
     vnc_server->write(query.toUtf8());
 
     vnc_server->waitForBytesWritten();
@@ -86,17 +99,39 @@ void XSConsoleVNCTunnel::writeToClient()
 {
     while(!vnc_server->atEnd())
     {
-        size_t sz = vnc_server->bytesAvailable();
+        qint64 sz = vnc_server->bytesAvailable();
         char buf[sz];
         char *b = buf;
         sz = vnc_server->read(buf, sz);
 
-        if(!got_rfb_header && QString(buf).startsWith("RFB"))
-        {
-            got_rfb_header = true;
+        if(current_client == nullptr)
+            continue;
 
-            connect(current_client, SIGNAL(readyRead()), this, SLOT(writeToServer()));
-            connect(current_client, SIGNAL(aboutToClose()), this, SLOT(clientClosed()));
+        if(!got_rfb_header)
+        {
+            QString string(buf);
+
+            if(string.startsWith("RFB"))
+            {
+                qDebug() << "VNC connection established";
+                got_rfb_header = true;
+
+                connect(current_client, SIGNAL(readyRead()), this, SLOT(writeToServer()));
+                connect(current_client, SIGNAL(aboutToClose()), this, SLOT(clientClosed()));
+            }
+            else if(string.startsWith("HTTP/1.1"))
+            {
+                QRegExp http("^HTTP/1.1 (\\d+) (.+)$");
+                if(http.indexIn(string) == -1 || http.cap(1).toInt() != 200)
+                {
+                    qDebug() << "HTTP error: " << string;
+
+                    current_client->close();
+                    clientClosed();
+
+                    return;
+                }
+            }
         }
 
         if(!got_rfb_header)
@@ -104,7 +139,15 @@ void XSConsoleVNCTunnel::writeToClient()
 
         while(sz)
         {
-            size_t s = current_client->write(b, sz);
+            qint64 s = current_client->write(b, sz);
+            if(s < 0)
+            {
+                qDebug() << "Client closed connection";
+                current_client->close();
+                clientClosed();
+                break;
+            }
+
             sz -= s;
             b += s;
         }
@@ -121,7 +164,15 @@ void XSConsoleVNCTunnel::writeToServer()
         sz = current_client->read(buf, sz);
         while(sz)
         {
-            size_t s = vnc_server->write(b, sz);
+            qint64 s = vnc_server->write(b, sz);
+            if(s < 0)
+            {
+                qDebug() << "Server closed connection";
+                stopListening();
+                quit();
+                return;
+            }
+
             sz -= s;
             b += s;
         }

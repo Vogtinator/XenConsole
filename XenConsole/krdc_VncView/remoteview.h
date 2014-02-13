@@ -237,7 +237,7 @@ public:
      * @see disconnectedError()
      * @see statusChanged()
      */
-    virtual bool start() = 0;
+    virtual bool start(RemoteView::Quality quality) = 0;
     
     /**
      * Called when the configuration is changed.

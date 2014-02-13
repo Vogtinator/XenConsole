@@ -144,7 +144,7 @@ rfbBool VncClientThread::newclient()
 {
     //8bit color hack for Intel(r) AMT KVM "classic vnc" = vnc server built in in Intel Vpro chipsets.
     if (INTEL_AMT_KVM_STRING == cl->desktopName) {
-        kDebug(5011) << "Intel(R) AMT KVM: switching to 8 bit color depth (workaround, recent libvncserver needed)";
+        //kDebug(5011) << "Intel(R) AMT KVM: switching to 8 bit color depth (workaround, recent libvncserver needed)";
         setColorDepth(bpp8);
     }
     setClientColorDepth(cl, colorDepth());
@@ -200,9 +200,9 @@ void VncClientThread::updatefb(int x, int y, int w, int h)
         break;
     }
 
-    if (img.isNull()) {
+    /*if (img.isNull()) {
         kDebug(5011) << "image not loaded";
-    }
+    }*/
     
     if (m_stopped) {
         return; // sending data to a stopped thread is not a good idea
@@ -225,7 +225,7 @@ void VncClientThread::cuttext(const char *text, int textlen)
 
 char *VncClientThread::passwdHandler()
 {
-    kDebug(5011) << "password request";
+    //kDebug(5011) << "password request";
 
     // Never request a password during a reconnect attempt.
     if (!m_keepalive.failed) {
@@ -237,7 +237,7 @@ char *VncClientThread::passwdHandler()
 
 rfbCredential *VncClientThread::credentialHandler(int credentialType)
 {
-    kDebug(5011) << "credential request" << credentialType;
+    //kDebug(5011) << "credential request" << credentialType;
 
     rfbCredential *cred = 0;
 
@@ -348,7 +348,7 @@ VncClientThread::VncClientThread(QObject *parent)
 
 VncClientThread::~VncClientThread()
 {
-    if(isRunning()) {
+    while(isRunning()) {
         stop();
         terminate();
         const bool quitSuccess = wait(1000);
@@ -624,7 +624,7 @@ void VncClientThread::clientSetKeepalive()
         return;
     }
     m_keepalive.set = true;
-    kDebug(5011) << "TCP keepalive set";
+    //kDebug(5011) << "TCP keepalive set";
 }
 
 /**

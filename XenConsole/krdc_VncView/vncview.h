@@ -47,12 +47,12 @@ public:
     explicit VncView(QWidget *parent = 0, const KUrl &url = KUrl(), KConfigGroup configGroup = KConfigGroup());
     ~VncView();
 
-    QSize framebufferSize();
+    /*QSize framebufferSize();
     QSize sizeHint() const;
-    QSize minimumSizeHint() const;
+    QSize minimumSizeHint() const;*/
     void startQuitting();
     bool isQuitting();
-    bool start();
+    bool start(RemoteView::Quality quality);
     bool supportsScaling() const;
     bool supportsLocalCursor() const;
     
@@ -70,9 +70,9 @@ public slots:
     void scaleResize(int w, int h);
 
 protected:
-    void paintEvent(QPaintEvent *event);
-    bool event(QEvent *event);
-    void resizeEvent(QResizeEvent *event);
+    void paintEvent(QPaintEvent *event) override;
+    bool event(QEvent *event) override;
+    void resizeEvent(QResizeEvent *event) override;
     bool eventFilter(QObject *obj, QEvent *event);
 
 private:

@@ -15,7 +15,7 @@ QMAKE_CXXFLAGS += -std=c++11
 
 DEFINES += QTONLY
 
-LIBS += -lcurl -lxml2 -lxenserver -lgnutls -lvncclient
+LIBS += -lcurl -lxml2 -lxenserver -lvncclient
 
 SOURCES += main.cpp\
         mainwindow.cpp \

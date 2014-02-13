@@ -2,9 +2,13 @@
 #define VMWINDOW_H
 
 #include <QMainWindow>
+
+/* Fix "macro argument mismatch." */
+#ifndef Q_MOC_RUN
 #include "krdc_VncView/vncview.h"
-#include "xenserverapi.h"
 #include "xsconsolevnctunnel.h"
+#include "xenserverapi.h"
+#endif
 
 namespace Ui {
 class VMWindow;
@@ -19,7 +23,7 @@ public:
     ~VMWindow();
 
 public slots:
-    void resizeEvent(QResizeEvent *);
+    void vncError(QString title, QString msg);
     
 private:
     Ui::VMWindow *ui;
